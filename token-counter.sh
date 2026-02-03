@@ -20,8 +20,6 @@ ICON_GIT="󰊢"
 ICON_MODEL="󰧑"
 ICON_COST="󰄴"
 ICON_CONTEXT="󰍛"
-ICON_CPU="󰘚"
-ICON_RAM=""
 ICON_COMMIT="󰜘"
 
 # Read JSON input from stdin
@@ -107,15 +105,6 @@ progress_bar() {
     echo "$bar"
 }
 
-# Get CPU usage (1-minute load average / number of cores = percentage)
-cpu_cores=$(nproc 2>/dev/null || echo 1)
-load_avg=$(cat /proc/loadavg 2>/dev/null | cut -d' ' -f1)
-cpu_pct=$(echo "scale=0; ($load_avg * 100) / $cpu_cores" | bc 2>/dev/null || echo "0")
-
-# Get RAM usage
-mem_info=$(free -m 2>/dev/null | awk '/^Mem:/ {printf "%.0f", $3/$2*100}')
-ram_pct=${mem_info:-0}
-
 # Get usage data
 today_date=$(date +%Y%m%d)
 today_cost=$(bun x ccusage daily --since "$today_date" --until "$today_date" --json 2>/dev/null | jq -r '.totals.totalCost' 2>/dev/null)
@@ -158,25 +147,5 @@ output+=" ${DIM}│${RESET} ${ICON_COST} ${GREEN}\$${session_fmt}${RESET} ${DIM}
 
 # Context bar
 output+=" ${DIM}│${RESET} ${ICON_CONTEXT} ${bar_color}${bar}${RESET} ${DIM}${context_pct}%${RESET}"
-
-# CPU with color
-if [ "$cpu_pct" -lt 50 ]; then
-    cpu_color="${GREEN}"
-elif [ "$cpu_pct" -lt 80 ]; then
-    cpu_color="${YELLOW}"
-else
-    cpu_color="${RED}"
-fi
-output+=" ${DIM}│${RESET} ${ICON_CPU} ${cpu_color}${cpu_pct}%${RESET}"
-
-# RAM with color
-if [ "$ram_pct" -lt 50 ]; then
-    ram_color="${GREEN}"
-elif [ "$ram_pct" -lt 80 ]; then
-    ram_color="${YELLOW}"
-else
-    ram_color="${RED}"
-fi
-output+=" ${ICON_RAM} ${ram_color}${ram_pct}%${RESET}"
 
 printf "%b" "$output"
