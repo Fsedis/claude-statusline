@@ -29,13 +29,6 @@
 ### 1. Установите зависимости
 
 ```bash
-# Arch Linux
-sudo pacman -S jq bc
-
-# Ubuntu/Debian
-sudo apt install jq bc
-
-# macOS
 brew install jq bc
 ```
 

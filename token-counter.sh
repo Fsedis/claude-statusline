@@ -108,13 +108,18 @@ progress_bar() {
 }
 
 # Get CPU usage (1-minute load average / number of cores = percentage)
-cpu_cores=$(nproc 2>/dev/null || echo 1)
-load_avg=$(cat /proc/loadavg 2>/dev/null | cut -d' ' -f1)
+cpu_cores=$(sysctl -n hw.ncpu 2>/dev/null || echo 1)
+load_avg=$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')
 cpu_pct=$(echo "scale=0; ($load_avg * 100) / $cpu_cores" | bc 2>/dev/null || echo "0")
 
-# Get RAM usage
-mem_info=$(free -m 2>/dev/null | awk '/^Mem:/ {printf "%.0f", $3/$2*100}')
-ram_pct=${mem_info:-0}
+# Get RAM usage (macOS)
+page_size=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
+pages_active=$(vm_stat 2>/dev/null | awk '/Pages active/ {gsub(/\./,""); print $3}')
+pages_wired=$(vm_stat 2>/dev/null | awk '/Pages wired/ {gsub(/\./,""); print $4}')
+pages_compressed=$(vm_stat 2>/dev/null | awk '/Pages occupied by compressor/ {gsub(/\./,""); print $5}')
+total_mem=$(sysctl -n hw.memsize 2>/dev/null || echo 1)
+used_mem=$(( (${pages_active:-0} + ${pages_wired:-0} + ${pages_compressed:-0}) * page_size ))
+ram_pct=$(echo "scale=0; ($used_mem * 100) / $total_mem" | bc 2>/dev/null || echo "0")
 
 # Get usage data
 today_date=$(date +%Y%m%d)
