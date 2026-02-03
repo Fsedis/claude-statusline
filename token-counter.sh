@@ -20,8 +20,6 @@ ICON_GIT="󰊢"
 ICON_MODEL="󰧑"
 ICON_COST="󰄴"
 ICON_CONTEXT="󰍛"
-ICON_CPU="󰘚"
-ICON_RAM=""
 ICON_COMMIT="󰜘"
 
 # Read JSON input from stdin
@@ -107,20 +105,6 @@ progress_bar() {
     echo "$bar"
 }
 
-# Get CPU usage (1-minute load average / number of cores = percentage)
-cpu_cores=$(sysctl -n hw.ncpu 2>/dev/null || echo 1)
-load_avg=$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')
-cpu_pct=$(echo "scale=0; ($load_avg * 100) / $cpu_cores" | bc 2>/dev/null || echo "0")
-
-# Get RAM usage (macOS)
-page_size=$(sysctl -n hw.pagesize 2>/dev/null || echo 4096)
-pages_active=$(vm_stat 2>/dev/null | awk '/Pages active/ {gsub(/\./,""); print $3}')
-pages_wired=$(vm_stat 2>/dev/null | awk '/Pages wired/ {gsub(/\./,""); print $4}')
-pages_compressed=$(vm_stat 2>/dev/null | awk '/Pages occupied by compressor/ {gsub(/\./,""); print $5}')
-total_mem=$(sysctl -n hw.memsize 2>/dev/null || echo 1)
-used_mem=$(( (${pages_active:-0} + ${pages_wired:-0} + ${pages_compressed:-0}) * page_size ))
-ram_pct=$(echo "scale=0; ($used_mem * 100) / $total_mem" | bc 2>/dev/null || echo "0")
-
 # Get usage data
 today_date=$(date +%Y%m%d)
 today_cost=$(bun x ccusage daily --since "$today_date" --until "$today_date" --json 2>/dev/null | jq -r '.totals.totalCost' 2>/dev/null)
@@ -163,25 +147,5 @@ output+=" ${DIM}│${RESET} ${ICON_COST} ${GREEN}\$${session_fmt}${RESET} ${DIM}
 
 # Context bar
 output+=" ${DIM}│${RESET} ${ICON_CONTEXT} ${bar_color}${bar}${RESET} ${DIM}${context_pct}%${RESET}"
-
-# CPU with color
-if [ "$cpu_pct" -lt 50 ]; then
-    cpu_color="${GREEN}"
-elif [ "$cpu_pct" -lt 80 ]; then
-    cpu_color="${YELLOW}"
-else
-    cpu_color="${RED}"
-fi
-output+=" ${DIM}│${RESET} ${ICON_CPU} ${cpu_color}${cpu_pct}%${RESET}"
-
-# RAM with color
-if [ "$ram_pct" -lt 50 ]; then
-    ram_color="${GREEN}"
-elif [ "$ram_pct" -lt 80 ]; then
-    ram_color="${YELLOW}"
-else
-    ram_color="${RED}"
-fi
-output+=" ${ICON_RAM} ${ram_color}${ram_pct}%${RESET}"
 
 printf "%b" "$output"
